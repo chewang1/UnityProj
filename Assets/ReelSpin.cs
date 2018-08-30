@@ -5,20 +5,30 @@ using UnityEngine;
 public class ReelSpin : MonoBehaviour
 {
     
-    private float numDiff = 3;
+    private Vector3 diff;
     //boundaries for numbers
     private float lowerbound;
     private float topbound;
 
+    private Vector3 targetpos;
+    private Vector3 startpos;
+
     //increase speed
-    private float curspeed = 0;
+    private float curspeed;
     private float acceleration = 1;
+    private bool isMaxSpeed;
+    private float currenttime = 0;
+    private float timeToMove = 5;
+
     [SerializeField]
     public List<GameObject> numbers = new List<GameObject>();
 
+    private List<Vector3> displayPos = new List<Vector3>();
 
     public Sprite n1, n2, n3, n4, n5, n6, n7, n8, n9, n10;
     private int curPtr;
+    private int prev;
+    private int next;
     public int[] slots;
     public int[] shownNumbers;
     //private GameObject number;
@@ -27,23 +37,28 @@ public class ReelSpin : MonoBehaviour
 	{
         //set lowerbound and topbound
         lowerbound = numbers[numbers.Count - 1].transform.position.y;
-        topbound = numbers[0].transform.position.y + numDiff;
-
+        topbound = numbers[0].transform.position.y;
+	    diff = numbers[1].transform.position - numbers[0].transform.position;
+        isMaxSpeed = false;
         //init for random numbers in reel
-	    curPtr = Random.Range(0, numbers.Count);
+        curPtr = Random.Range(0, numbers.Count);
 	    slots = new int[10];
+
+	    displayPos.Add(transform.Find("DisplayPos1").position);
+	    displayPos.Add(transform.Find("DisplayPos2").position);
+	    displayPos.Add(transform.Find("DisplayPos3").position);
 
         //init for shown panel numbers
 	    shownNumbers = new int [3];
         //set 1- 10 into slots
         //set probability, 10 means 10 numbers in reel
-        setProbability(GM.GameManager.probability);
+        SetProbability(GM.GameManager.probability);
 	    
         //do shffule
-        shuffle(slots);   
+        Shuffle(slots);   
 
         //assign to number objects
-	    assignNumber(slots);
+	    AssignNumber(slots);
 
 	}
 	
@@ -52,94 +67,160 @@ public class ReelSpin : MonoBehaviour
         //spin the reel
 	    if (GM.GameManager.isSpin)
 	    {
-	        foreach (GameObject number in numbers)
-	        {
-	            //moving downward and gradually increase speed
-	            number.transform.Translate(Vector3.down * curspeed * Time.deltaTime);
-	            curspeed += acceleration * Time.deltaTime;
-	            
-                Mathf.Clamp(curspeed, 0 ,GM.GameManager.maxspeed);
-                Vector3 pos = number.transform.position;
-
-	            if (number.transform.position.y < lowerbound)
-	            {
-	                number.transform.position = new Vector3(pos.x, topbound, pos.z);
-	                //float diff = numbers[9].transform.position.y - numbers[0].transform.position.y;
-	                //Debug.Log(diff);
-	            }
-	        }
-
+	        IncreaseSpeed(numbers);
 	        Spin();
-	        //GM.GameManager.GetResult();
 	    }
 	    else
 	    {
-            //stop spin with lower velocity
-	        foreach (GameObject number in numbers)
-	        {
-	            //curspeed = Mathf.Lerp(0, GM.GameManager.maxspeed, Time.deltaTime);
-                //number.transform.Translate(Vector3.down * curspeed * Time.deltaTime);
-                
-	        }
+            if(GM.GameManager.isStart)
+	            DecreaseSpeed(numbers);
 	    }
 	}
 
-    void shuffle(int []slots)
+    void RepeatMove(GameObject number, int index)
     {
-        for (int i = 0; i < slots.Length; i++)
+        Vector3 pos = number.transform.position;
+        if (number.transform.position.y < lowerbound)
         {
-            
-            int r = Random.Range(i, slots.Length);
-            //swap
-            int temp = slots[i];
-            slots[i] = slots[r];
-            slots[r] = temp;
-
+            number.transform.position = new Vector3(pos.x, topbound, pos.z);
+            //fix relative distance
+            if (index == numbers.Count - 1)
+                number.transform.position = numbers[0].transform.position - diff;
+            else
+                number.transform.position = numbers[index + 1].transform.position - diff;
         }
     }
 
-    void assignNumber(int[] slots)
+    void IncreaseSpeed(List<GameObject> numbers)
+    {
+        for (int i = 0; i < numbers.Count; i++)
+        {
+            //moving downward and gradually increase speed
+            numbers[i].transform.Translate(Vector3.down * curspeed * Time.deltaTime);
+
+            curspeed += acceleration * Time.deltaTime;
+
+            Mathf.Clamp(curspeed, 0, GM.GameManager.maxspeed);
+            Vector3 pos = numbers[i].transform.position;
+
+            RepeatMove(numbers[i], i);
+        }
+    }
+
+    void DecreaseSpeed(List<GameObject> numbers)
+    {
+        //stop spin with lower velocity
+        for (int i = 0; i < numbers.Count; i++)
+        {
+
+            curspeed -= acceleration * Time.deltaTime;
+            numbers[i].transform.Translate(Vector3.down * curspeed * Time.deltaTime);
+            //ready for stop       
+            //if (curspeed <= 2)
+            //    curspeed = 2f;
+
+
+            //numbers[curPtr].transform.position = numbers[next].transform.position - diff;
+            //numbers[prev].transform.position = numbers[curPtr].transform.position - diff;
+            if (curspeed <= 2)
+            {
+                isMaxSpeed = true;
+                curspeed = 2;
+            }
+               
+            RepeatMove(numbers[i], i);
+
+            if (isMaxSpeed)
+            {
+                
+                if (numbers[curPtr].transform.position.y <= displayPos[1].y &&
+                    numbers[curPtr].transform.position.y >= displayPos[2].y)
+                {
+                    curspeed = 0;
+                    numbers[curPtr].transform.position = displayPos[1];
+                    numbers[prev].transform.position = displayPos[0];
+                    numbers[next].transform.position = displayPos[2];
+                    for(int k=0;k<numbers.Count;k++)
+                        numbers[k].transform.Translate(Vector3.zero);
+                    isMaxSpeed = false;
+
+                    break;
+                }
+                
+            }
+
+        }
+        
+    }
+
+    
+    void Shuffle(int []slots)
+    {
+        for (int i = 0; i < slots.Length; i++)
+        {   
+            int r = Random.Range(i, slots.Length);
+            Swap(ref slots[i], ref slots[r]);
+        }
+    }
+
+    static void Swap(ref int x, ref int y)
+    {
+        int tempswap = x;
+        x = y;
+        y = tempswap;
+    }
+    void AssignNumber(int[] slots)
     {
         //change sprite pics
         for (int i = 0; i < slots.Length; i++)
         {
-            setSpritefromArray(numbers[i], slots[i]);
+            SetSpritefromArray(numbers[i], slots[i]);
         }
     }
 
-    void setSpritefromArray(GameObject obj, int number)
+    void SetSpritefromArray(GameObject obj, int number)
     {
         switch(number)
         {
             case 1:
                 obj.GetComponent<SpriteRenderer>().sprite = n1;
+                obj.GetComponent<NumberVar>().number = 1;
                 break;
             case 2:
                 obj.GetComponent<SpriteRenderer>().sprite = n2;
+                obj.GetComponent<NumberVar>().number = 2;
                 break;
             case 3:
                 obj.GetComponent<SpriteRenderer>().sprite = n3;
+                obj.GetComponent<NumberVar>().number = 3;
                 break;
             case 4:
                 obj.GetComponent<SpriteRenderer>().sprite = n4;
+                obj.GetComponent<NumberVar>().number = 4;
                 break;
             case 5:
                 obj.GetComponent<SpriteRenderer>().sprite = n5;
+                obj.GetComponent<NumberVar>().number = 5;
                 break;
             case 6:
                 obj.GetComponent<SpriteRenderer>().sprite = n6;
+                obj.GetComponent<NumberVar>().number = 6;
                 break;
             case 7:
                 obj.GetComponent<SpriteRenderer>().sprite = n7;
+                obj.GetComponent<NumberVar>().number = 7;
                 break;
             case 8:
                 obj.GetComponent<SpriteRenderer>().sprite = n8;
+                obj.GetComponent<NumberVar>().number = 8;
                 break;
             case 9:
                 obj.GetComponent<SpriteRenderer>().sprite = n9;
+                obj.GetComponent<NumberVar>().number = 9;
                 break;
             case 10:
                 obj.GetComponent<SpriteRenderer>().sprite = n10;
+                obj.GetComponent<NumberVar>().number = 10;
                 break;
             default:
                 Debug.Log("no such number for sprite");
@@ -148,7 +229,7 @@ public class ReelSpin : MonoBehaviour
     }
 
     //function for set random number range into slots array
-    void setProbability(int numberRange)
+    void SetProbability(int numberRange)
     {
         for (int i = 0; i < slots.Length; i++)
         {
@@ -163,20 +244,19 @@ public class ReelSpin : MonoBehaviour
     void Spin()
     {
         int randspin = Random.Range(0, GM.GameManager.spintimes);
-
+        
         for (int i = 0; i < randspin; i++)
         {
             curPtr++;
-            if (curPtr > 8)
+            if (curPtr > 9)
                 curPtr = 0;
         }
-
-        int prev = curPtr - 1;
-        int next = curPtr + 1;
+        prev = curPtr - 1;
+        next = curPtr + 1;
 
         if (prev < 0)
-            prev = 8;
-        if (next > 8)
+            prev = 9;
+        if (next > 9)
             next = 0;
 
         shownNumbers[0] = slots[prev];

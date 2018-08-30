@@ -11,13 +11,13 @@ public class GameManager : MonoBehaviour
     public float maxspeed = 100;
     //user define how many times while spinning
     public int spintimes = 0;
-
+    public bool isStart = false;
     //2d array for saving values from numbers shown in panel
     public int[,] values = new int[3,3];
     public Text resultText1;
     public Text resultText2;
     public Text resultText3;
-    private bool isClicked = false;
+ 
 
     public void onClickedSpin()
     {
@@ -31,9 +31,9 @@ public class GameManager : MonoBehaviour
         }
 
         //for (int i = 0; i < values.GetLength(0); i++)
-            //for (int j = 0; j < values.GetLength(1); j++)
-                //Debug.Log(values[i, j]);
-
+        //for (int j = 0; j < values.GetLength(1); j++)
+        //Debug.Log(values[i, j]);
+        isStart = true;
         isSpin = !isSpin;
     }
 
