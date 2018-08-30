@@ -10,20 +10,17 @@ public class ReelSpin : MonoBehaviour
     private float lowerbound;
     private float topbound;
 
-    private Vector3 targetpos;
-    private Vector3 startpos;
 
     //increase speed
     private float curspeed;
     private float acceleration = 1;
     private bool isMaxSpeed;
-    private float currenttime = 0;
-    private float timeToMove = 5;
+    public bool isDone = false;
 
     [SerializeField]
     public List<GameObject> numbers = new List<GameObject>();
 
-    private List<Vector3> displayPos = new List<Vector3>();
+    public List<Vector3> displayPos = new List<Vector3>();
 
     public Sprite n1, n2, n3, n4, n5, n6, n7, n8, n9, n10;
     private int curPtr;
@@ -59,14 +56,17 @@ public class ReelSpin : MonoBehaviour
 
         //assign to number objects
 	    AssignNumber(slots);
+	    DisplayOnPanel();
 
 	}
 	
 	// Update is called once per frame
 	void Update () {
+	    DisplayOnPanel();
         //spin the reel
-	    if (GM.GameManager.isSpin)
+        if (GM.GameManager.isSpin)
 	    {
+            isDone = false;
 	        IncreaseSpeed(numbers);
 	        Spin();
 	    }
@@ -93,8 +93,10 @@ public class ReelSpin : MonoBehaviour
 
     void IncreaseSpeed(List<GameObject> numbers)
     {
+        
         for (int i = 0; i < numbers.Count; i++)
         {
+            
             //moving downward and gradually increase speed
             numbers[i].transform.Translate(Vector3.down * curspeed * Time.deltaTime);
 
@@ -105,50 +107,48 @@ public class ReelSpin : MonoBehaviour
 
             RepeatMove(numbers[i], i);
         }
+        
     }
 
     void DecreaseSpeed(List<GameObject> numbers)
     {
+
         //stop spin with lower velocity
         for (int i = 0; i < numbers.Count; i++)
         {
-
-            curspeed -= acceleration * Time.deltaTime;
-            numbers[i].transform.Translate(Vector3.down * curspeed * Time.deltaTime);
+            if (curspeed != 0)
+                curspeed -= acceleration * Time.deltaTime;
+            else
+                isDone = true;
             //ready for stop       
-            //if (curspeed <= 2)
-            //    curspeed = 2f;
-
-
-            //numbers[curPtr].transform.position = numbers[next].transform.position - diff;
-            //numbers[prev].transform.position = numbers[curPtr].transform.position - diff;
-            if (curspeed <= 2)
+            if (curspeed < 2 && curspeed > 0)
             {
                 isMaxSpeed = true;
                 curspeed = 2;
             }
-               
+            
+            numbers[i].transform.Translate(Vector3.down * curspeed * Time.deltaTime);
             RepeatMove(numbers[i], i);
 
-            if (isMaxSpeed)
-            {
-                
-                if (numbers[curPtr].transform.position.y <= displayPos[1].y &&
-                    numbers[curPtr].transform.position.y >= displayPos[2].y)
-                {
-                    curspeed = 0;
-                    numbers[curPtr].transform.position = displayPos[1];
-                    numbers[prev].transform.position = displayPos[0];
-                    numbers[next].transform.position = displayPos[2];
-                    for(int k=0;k<numbers.Count;k++)
-                        numbers[k].transform.Translate(Vector3.zero);
-                    isMaxSpeed = false;
+        }
 
-                    break;
-                }
+        if (isMaxSpeed)
+        {
+            numbers[curPtr].transform.position = numbers[next].transform.position - diff;
+            numbers[prev].transform.position = numbers[curPtr].transform.position - diff;
+            //reset to old pos for fixed distance
+            
+
+            if (numbers[curPtr].transform.position.y <= displayPos[1].y &&
+                numbers[curPtr].transform.position.y >= displayPos[2].y)
+            {
+                curspeed = 0;
+                numbers[curPtr].transform.position = displayPos[1];
+                numbers[prev].transform.position = displayPos[0];
+                numbers[next].transform.position = displayPos[2];
+                isMaxSpeed = false;
                 
             }
-
         }
         
     }
@@ -267,5 +267,20 @@ public class ReelSpin : MonoBehaviour
             //Debug.Log(shownNumbers[i]);
     }
 
+    void DisplayOnPanel()
+    {
+        Vector3 showarea = transform.position;
+        
+        foreach (GameObject number in numbers)
+        {
+            Vector3 originalpos = number.transform.position;
+            //show in panel
+            if (number.transform.position.y <= 4f && number.transform.position.y >= -3.5f)
+                number.transform.position = new Vector3(originalpos.x, originalpos.y, showarea.z - 0.5f);
+            else
+                number.transform.position = originalpos;
+        }
+    }
 
+    
 }
