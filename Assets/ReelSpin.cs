@@ -1,11 +1,14 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class ReelSpin : MonoBehaviour
 {
     
     private Vector3 diff;
+
     //boundaries for numbers
     private float lowerbound;
     private float topbound;
@@ -36,6 +39,7 @@ public class ReelSpin : MonoBehaviour
         lowerbound = numbers[numbers.Count - 1].transform.position.y;
         topbound = numbers[0].transform.position.y;
 	    diff = numbers[1].transform.position - numbers[0].transform.position;
+
         isMaxSpeed = false;
         //init for random numbers in reel
         curPtr = Random.Range(0, numbers.Count);
@@ -88,21 +92,24 @@ public class ReelSpin : MonoBehaviour
                 number.transform.position = numbers[0].transform.position - diff;
             else
                 number.transform.position = numbers[index + 1].transform.position - diff;
+
+            //Debug.Log(numbers[0].transform.position - numbers[1].transform.position);
         }
+        
     }
 
     void IncreaseSpeed(List<GameObject> numbers)
-    {
-        
+    {   
         for (int i = 0; i < numbers.Count; i++)
-        {
-            
+        {           
             //moving downward and gradually increase speed
             numbers[i].transform.Translate(Vector3.down * curspeed * Time.deltaTime);
 
             curspeed += acceleration * Time.deltaTime;
 
-            Mathf.Clamp(curspeed, 0, GM.GameManager.maxspeed);
+            //Mathf.Clamp(curspeed, 0, GM.GameManager.maxspeed);
+            if (curspeed >= GM.GameManager.maxspeed)
+                curspeed = GM.GameManager.maxspeed;
             Vector3 pos = numbers[i].transform.position;
 
             RepeatMove(numbers[i], i);
@@ -129,25 +136,37 @@ public class ReelSpin : MonoBehaviour
             
             numbers[i].transform.Translate(Vector3.down * curspeed * Time.deltaTime);
             RepeatMove(numbers[i], i);
-
         }
 
         if (isMaxSpeed)
         {
-            numbers[curPtr].transform.position = numbers[next].transform.position - diff;
-            numbers[prev].transform.position = numbers[curPtr].transform.position - diff;
-            //reset to old pos for fixed distance
-            
 
             if (numbers[curPtr].transform.position.y <= displayPos[1].y &&
                 numbers[curPtr].transform.position.y >= displayPos[2].y)
             {
+                //fixed relative distance
+                if(prev == 0)
+                    numbers[numbers.Count-1].transform.position = numbers[prev].transform.position - diff;
+                else
+                    numbers[prev - 1].transform.position = numbers[prev].transform.position - diff;
+
+                numbers[curPtr].transform.position = numbers[next].transform.position - diff;
+                numbers[prev].transform.position = numbers[curPtr].transform.position - diff;
+
+                if(next == numbers.Count - 1)
+                    numbers[next].transform.position = numbers[0].transform.position - diff;
+                else
+                    numbers[next].transform.position = numbers[next + 1].transform.position - diff;
+
+                //stop
                 curspeed = 0;
+                //set to display area
                 numbers[curPtr].transform.position = displayPos[1];
                 numbers[prev].transform.position = displayPos[0];
                 numbers[next].transform.position = displayPos[2];
                 isMaxSpeed = false;
                 
+
             }
         }
         

@@ -11,16 +11,28 @@ public class GameManager : MonoBehaviour
     public float maxspeed = 100;
     //user define how many times while spinning
     public int spintimes = 0;
+    
     public bool isStart = false;
     private bool isWin = false;
+    private bool isAgain = false;
+    private int count = 0;
     //2d array for saving values from numbers shown in panel
     public int[,] values = new int[3,3];
     public Text resultText1;
     public Text resultText2;
     public Text resultText3;
+    public Text countText;
+    public Text congText;
     public bool[] allStop = new bool[3];
 
-
+    public GameObject hlinemid;
+    public GameObject hlineup;
+    public GameObject hlinebtm;
+    public GameObject vlinemid;
+    public GameObject vlineright;
+    public GameObject vlinemidleft;
+    public GameObject dline;
+    public GameObject dline2;
     void Update()
     {
         ReelSpin reel1 = this.transform.Find("Reel1").GetComponent<ReelSpin>();
@@ -32,16 +44,23 @@ public class GameManager : MonoBehaviour
             allStop[1] = true;
         if (reel3.isDone)
             allStop[2] = true;
-
-       
-        if (!allStop[0] || !allStop[1] || !allStop[2])
+        if (isAgain)
             LineDisable();
         if (allStop[0] && allStop[1] && allStop[2])
         {
             CheckLines();
             allStop[0] = allStop[1] = allStop[2] = false;
+            if (isWin)
+            {
+                congText.gameObject.SetActive(true);
+                countText.gameObject.SetActive(true);
+                countText.text = "You got " + count.ToString() + " Line.";
+                isWin = false;      
+            }
+            count = 0;
+            isAgain = true;
         }
-            
+        
     }
 
     public void onClickedSpin()
@@ -54,12 +73,10 @@ public class GameManager : MonoBehaviour
             resultText1.text = values[0, 0].ToString() + " " + values[0, 1].ToString() + " " + values[0, 2].ToString();
             resultText2.text = values[1, 0].ToString() + " " + values[1, 1].ToString() + " " + values[1, 2].ToString();
             resultText3.text = values[2, 0].ToString() + " " + values[2, 1].ToString() + " " + values[2, 2].ToString();
+            
         }
-
-        //for (int i = 0; i < values.GetLength(0); i++)
-        //for (int j = 0; j < values.GetLength(1); j++)
-        //Debug.Log(values[i, j]);
-        isStart = true;
+        
+        isStart = true;   
         isSpin = !isSpin;
     }
 
@@ -79,10 +96,7 @@ public class GameManager : MonoBehaviour
 
     public void CheckLines()
     {
-        GameObject hline = transform.Find("HorizonLine").gameObject;
-        GameObject vline = transform.Find("VerticalLine").gameObject;
-        GameObject dline = transform.Find("DiagonalLine").gameObject;
-        GameObject dline2 = transform.Find("DiagonalLine2").gameObject;
+        
         //horizon lines
         if ((values[0, 0] == values[0, 1] && values[0, 1] == values[0, 2]) ||
             (values[1, 0] == values[1, 1] && values[1, 1] == values[1, 2]) ||
@@ -92,47 +106,45 @@ public class GameManager : MonoBehaviour
             //up row
             if (values[0, 0] == values[0, 1] && values[0, 1] == values[0, 2])
             {
-                hline.GetComponent<LineRenderer>().enabled = true;
-                Vector3 pos = transform.Find("Reel1").Find("").GetComponent<ReelSpin>().displayPos[0];
-                hline.transform.position = pos + new Vector3(0, 0, -0.5f);
+                hlineup.SetActive(true);
+                count++;
             }
             //middle row
             if (values[1, 0] == values[1, 1] && values[1, 1] == values[1, 2])
             {
-                hline.GetComponent<LineRenderer>().enabled = true;
+                hlinemid.SetActive(true);
+                count++;
             }
             //low row
             if (values[2, 0] == values[2, 1] && values[2, 1] == values[2, 2])
             {
-                hline.GetComponent<LineRenderer>().enabled = true;
-                Vector3 pos = transform.Find("Reel1").Find("").GetComponent<ReelSpin>().displayPos[2];
-                hline.transform.position = pos + new Vector3(0, 0, -0.5f);
+                hlinebtm.SetActive(true);
+                count++;
             }
         }
         //vertical lines
         if ((values[0, 0] == values[1, 0] && values[1, 0] == values[2, 0]) ||
-                 (values[0, 1] == values[1, 1] && values[1, 1] == values[1, 2]) ||
+                 (values[0, 1] == values[1, 1] && values[1, 1] == values[2, 1]) ||
                  (values[0, 2] == values[1, 2] && values[1, 2] == values[2, 2]))
         {
             isWin = true;
             //left coloum
             if (values[0, 0] == values[1, 0] && values[1, 0] == values[2, 0])
             {
-                vline.GetComponent<LineRenderer>().enabled = true;
-                Vector3 pos = transform.Find("Reel1").Find("").GetComponent<ReelSpin>().displayPos[0];
-                vline.transform.position = pos + new Vector3(0, 0, -0.5f);
+                vlinemidleft.SetActive(true);
+                count++;
             }
             //middle coloum
-            if (values[0, 1] == values[1, 1] && values[1, 1] == values[1, 2])
+            if (values[0, 1] == values[1, 1] && values[1, 1] == values[2, 1])
             {
-                vline.GetComponent<LineRenderer>().enabled = true;
+                vlinemid.SetActive(true);
+                count++;
             }
             //right coloum
             if (values[0, 2] == values[1, 2] && values[1, 2] == values[2, 2])
             {
-                vline.GetComponent<LineRenderer>().enabled = true;
-                Vector3 pos = transform.Find("Reel3").Find("").GetComponent<ReelSpin>().displayPos[0];
-                vline.transform.position = pos + new Vector3(0, 0, -0.5f);
+                vlineright.SetActive(true);
+                count++;
             }
         }
         //diagonal lines
@@ -143,14 +155,16 @@ public class GameManager : MonoBehaviour
             //lefttop to rightbottom diag
             if (values[0, 0] == values[1, 1] && values[1, 1] == values[2, 2])
             {
-                dline.GetComponent<LineRenderer>().enabled = true;
-                
+                dline.SetActive(true);
+                count++;
+
             }
             //righttop to leftbottom diag
             if (values[0, 2] == values[1, 1] && values[1, 1] == values[2, 0])
             {
-                dline2.GetComponent<LineRenderer>().enabled = true;
-                
+                dline2.SetActive(true);
+                count++;
+
             }
         }
     
@@ -159,15 +173,17 @@ public class GameManager : MonoBehaviour
 
     public void LineDisable()
     {
-        GameObject hline = transform.Find("HorizonLine").gameObject;
-        GameObject vline = transform.Find("VerticalLine").gameObject;
-        GameObject dline = transform.Find("DiagonalLine").gameObject;
-        GameObject dline2 = transform.Find("DiagonalLine2").gameObject;
-
-        hline.GetComponent<LineRenderer>().enabled = false;
-        vline.GetComponent<LineRenderer>().enabled = false;
-        dline.GetComponent<LineRenderer>().enabled = false;
-        dline2.GetComponent<LineRenderer>().enabled = false;
+        hlinemid.SetActive(false);
+        hlineup.SetActive(false);
+        hlinebtm.SetActive(false);
+        vlinemid.SetActive(false);
+        vlineright.SetActive(false);
+        vlinemidleft.SetActive(false);
+        dline.SetActive(false);
+        dline2.SetActive(false);
+        congText.gameObject.SetActive(false);
+        countText.gameObject.SetActive(false);
+        isAgain = false;
     }
 }
 
